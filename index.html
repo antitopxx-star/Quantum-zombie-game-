@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quantum Zombie Box (Science Project)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #202040;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 { color: #6aff6a; }
+
+    .box {
+      margin: 30px auto;
+      border: 4px solid #654321;
+      width: 250px;
+      height: 220px;
+      background-color: #4a2a0a;
+      position: relative;
+      border-radius: 5px;
+    }
+
+    .lid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: #8b5e3c;
+      line-height: 50px;
+      font-size: 1.5em;
+      transition: transform 0.5s;
+      transform-origin: top;
+    }
+
+    .lid.open { transform: rotateX(-110deg); }
+
+    .inside {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 170px;
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 4em;
+    }
+
+    .inside-label {
+      font-size: 0.2em;
+      color: #ccc;
+      background: rgba(255,255,255,0.1);
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+
+    button {
+      margin: 8px;
+      padding: 8px 18px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #openBtn  { background-color: lightgreen; }
+    #closeBtn { background-color: gold; }
+    #resetBtn { background-color: gray; color: white; }
+
+    #status {
+      margin-top: 10px;
+      background: rgba(0,0,0,0.3);
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 10px;
+    }
+
+    #collapse-msg {
+      color: #ff7b7b;
+      font-weight: bold;
+      min-height: 20px;
+      margin-top: 6px;
+    }
+
+    #context-line {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.88em;
+      max-width: 400px;
+      margin: 4px auto 0;
+    }
+
+    .panel {
+      max-width: 500px;
+      margin: 20px auto;
+      text-align: left;
+      background: #1d1d3a;
+      padding: 10px 15px;
+      border-radius: 8px;
+    }
+
+    .panel h3 { color: #6aff6a; }
+
+    .panel p, .panel li {
+      line-height: 1.6;
+      font-size: 0.95em;
+      color: #ddd;
+    }
+
+    .panel ul { padding-left: 20px; }
+    .panel li { margin-bottom: 5px; }
+
+    /* The table that maps simulation → real physics */
+    .mapping-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.88em;
+    }
+
+    .mapping-table th {
+      text-align: left;
+      color: #6aff6a;
+      padding: 4px 8px;
+      border-bottom: 1px solid #444;
+    }
+
+    .mapping-table td {
+      padding: 4px 8px;
+      color: #ccc;
+      border-bottom: 1px solid #2a2a4a;
+    }
+
+    /* State list shown while box is closed */
+    #state-list {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0 0;
+    }
+
+    #state-list li {
+      padding: 4px 0;
+      border-bottom: 1px solid #2a2a4a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #bbb;
+    }
+
+    #state-list li:last-child { border-bottom: none; }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #444;
+      flex-shrink: 0;
+    }
+
+    .dot.active   { background: #6aff6a; box-shadow: 0 0 4px #6aff6a; }
+    .dot.selected { background: gold;    box-shadow: 0 0 4px gold; }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 5px 12px;
+      font-size: 0.88em;
+      margin-top: 6px;
+    }
+
+    .stats-grid span:nth-child(even) {
+      color: #6aff6a;
+      font-weight: bold;
+      text-align: right;
+    }
+
+    /* History */
+    #history-list {
+      list-style: none;
+      padding: 0;
+      margin: 6px 0 0 0;
+      font-size: 0.85em;
+      color: #aaa;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    #history-list li {
+      padding: 3px 0;
+      border-bottom: 1px solid #2a2a4a;
+    }
+
+    .no-history { color: #555; font-style: italic; }
+
+    .box-row {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 30px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+
+    .box-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .box-group p {
+      margin: 0;
+      font-size: 0.85em;
+      color: #aaa;
+    }
+
+    #box2 {
+      border-color: #7a4a9a;
+      background-color: #2a1a3a;
+    }
+
+    #box2 .lid {
+      background: #5a3a7a;
+    }
+
+    #entangle-status {
+      font-size: 0.82em;
+      color: #cc99ff;
+      min-height: 18px;
+      font-style: italic;
+    }
+
+    #tunnelBtn {
+      background-color: #4a4a8a;
+      color: #aaaaff;
+      font-size: 0.85em;
+      padding: 6px 14px;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧟 Quantum Zombie in a Box</h1>
+  <p>My take on Schrödinger's Cat, but with a zombie because they're more interesting.</p>
+
+  <div class="box-row">
+
+    <div class="box-group">
+      <p>Box 1 (you control this one)</p>
+      <div class="box" id="box1">
+        <div class="lid" id="lid">🔒</div>
+        <div class="inside" id="inside">
+          <span id="zombie-emoji">❓</span>
+          <span class="inside-label" id="zombie-label"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="box-group">
+      <p>Box 2 (entangled partner)</p>
+      <div class="box" id="box2">
+        <div class="lid" id="lid2">🔒</div>
+        <div class="inside" id="inside2">
+          <span id="zombie-emoji2">❓</span>
+          <span class="inside-label" id="zombie-label2"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="entangle-status"></div>
+
+  <div id="status">📦 Box Closed (Superposition Active)</div>
+  <br>
+  <button id="openBtn"  onclick="openBox()">🔓 Open Box 1</button>
+  <button id="closeBtn" onclick="closeBox()" disabled>🔒 Close Boxes</button>
+  <button id="resetBtn" onclick="resetBox()">↺ Reset</button>
+  <br>
+  <button id="tunnelBtn" onclick="tryTunnel()">👻 Try to Escape (Tunneling)</button>
+
+  <div id="collapse-msg"></div>
+  <div id="context-line"></div>
+
+  <div class="panel">
+    <h3>What’s Superposition?</h3>
+    <p>
+      Quantum mechanics is pretty wild. Particles like electrons don’t just sit quietly in one state, waiting for you to check on them. Until you actually measure them, they exist in a kind of limbo—a mix of all their possible states at once. Physicists call this a wavefunction. It’s basically a list of every outcome that could happen, along with how likely each one is.
+    </p>
+    <p>
+      In my simulation, the <code>quantumStates</code> array works like that wavefunction. As long as the box stays closed, the zombie doesn’t pick a single state. It’s all of them at once—normal, doubled, dancing, or totally gone. That little ❓ stands for the mystery.
+    </p>
+    <p>So, while the box is shut, here’s what’s going on:</p>
+    <ul>
+      <li>🧟 Normal Zombie</li>
+      <li>🧟🧟 Two Zombies!</li>
+      <li>🕺🧟 Dancing Zombie</li>
+      <li>👻 Gone (Disappeared!)</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h3>What Happens When You Open the Box?</h3>
+    <p>
+      Cracking open the box is like making a measurement in quantum physics. The wavefunction collapses, and the zombie snaps into just one of those states—the rest vanish. But here’s the weird part: it’s not like flipping a coin, where the answer was already there and you just didn’t know it. The zombie genuinely wasn’t in any specific state until you looked. That’s what makes quantum mechanics so strange.
+    </p>
+    <p>
+      Which state do you get? That’s down to the Born Rule: the chance of each outcome is its amplitude squared. In my simulation, all four possibilities are equally likely—so each has a 25% shot. That’s why I use <code>Math.random()</code>. The randomness isn’t just ignorance; it’s baked right into nature.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h3>How My Simulation Matches Real Quantum Physics</h3>
+    <p>
+      In the real world, quantum particles don’t have fixed traits until you measure them. Their wavefunction holds all the possible outcomes and their odds. In my game, the zombie stands in for a quantum particle, and the <code>quantumStates</code> array is its wavefunction. When you open the box, you force the zombie into one definite state—just like a real quantum measurement.
+    </p>
+    <table class="mapping-table">
+      <tr><th>My Simulation</th><th>Real Quantum Mechanics</th></tr>
+      <tr><td>The zombie</td><td>A quantum particle</td></tr>
+      <tr><td>The <code>quantumStates</code> array</td><td>The wavefunction</td></tr>
+      <tr><td>Opening the box</td><td>Making a measurement</td></tr>
+      <tr><td><code>Math.random()</code></td><td>Quantum randomness</td></tr>
+      <tr><td>The outcome you see</td><td>The collapsed eigenstate</td></tr>
+    </table>
+    <p>
+      Of course, real quantum systems are even touchier. Superposition is super fragile—just bumping into something else can collapse it. That’s decoherence, and it’s why you never see your keys or your cat in two places at once. Schrödinger’s cat was meant to show how odd things would get if quantum rules worked on big stuff.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h3>Entanglement: Two Zombies, One Fate</h3>
+    <p>
+      Entanglement is another crazy quantum effect. When two particles get tangled up, you can’t talk about one without the other. Instead of each having its own wavefunction, they share. So until you measure them, they’re stuck in this joint superposition. Measure one, and you instantly know what happened to the other—even if they’re far apart.
+    </p>
+    <p>
+      In my game, I show this with a second zombie box. Open one box, and you immediately know what state the other zombie’s in. Their fates are tied together.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h3>Tunneling: When Zombies Disappear</h3>
+    <p>
+      Quantum tunneling is when a tiny particle slips through a barrier it shouldn’t be able to cross. Imagine a ball that doesn’t have enough energy to roll over a hill. In normal physics, it’s stuck. But in quantum mechanics, there’s a small chance it pops up on the other side, as if it sneaked through the hill.
+    </p>
+    <p>
+      That’s what the 👻 disappeared zombie shows. When you open the box and the zombie’s gone, its probability wave slipped through the walls and tunneled out. Poof—no more zombie inside.
+    </p>
+    <p>
+      Want to see tunneling in action? Try the “Try to Escape” button while the box is closed. There’s a 20% chance the zombie sneaks out before you even open it. That’s tunneling happening without you looking.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h3>📊 My Results So Far</h3>
+    <p style="font-size:0.85em; color:#aaa;">
+      If you open the box enough times, each state should come up about 25% of the time. That's the Born Rule in action.
+    </p>
+    <div class="stats-grid" id="stats-grid">
+      <span>Total observations:</span><span>0</span>
+      <span>🧟 Normal:</span><span>—</span>
+      <span>🧟🧟 Duplicate:</span><span>—</span>
+      <span>🕺 Dancing:</span><span>—</span>
+      <span>👻 Disappeared:</span><span>—</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>📋 History</h3>
+    <ul id="history-list">
+      <li class="no-history">No observations yet.</li>
+    </ul>
+  </div>
+
+  <script>
+  // Quick demo: superposition, measurement, entanglement, tunneling
+
+
+    // --- ENTANGLEMENT MAP ----------------------------------------
+    // Each state in box 1 is paired with a specific state in box 2.
+    // This models entanglement: once box 1 collapses, box 2's state
+    // is instantly determined because they share a single wavefunction.
+    // The pairs are opposites to make the correlation obvious.
+
+    const entangledPair = {
+      normal:      { emoji: "👻", label: "Gone" },
+      duplicate:   { emoji: "🕺🧟", label: "Dancing" },
+      dancing:     { emoji: "🧟🧟", label: "Two" },
+      disappeared: { emoji: "🧟", label: "Normal" }
+    };
+
+
+    // possible outcomes (id, emoji, label, context). add `weight` for uneven probs
+    const quantumStates = [
+      { id: 'normal', emoji: '🧟', label: 'Normal Zombie', context: 'Normal outcome.' },
+      { id: 'duplicate', emoji: '🧟🧟', label: 'Two Zombies', context: 'Duplicate outcome.' },
+      { id: 'dancing', emoji: '🕺🧟', label: 'Dancing Zombie', context: 'Dancing outcome.' },
+      { id: 'disappeared', emoji: '👻', label: 'Gone', context: 'Disappeared / tunneled out.' }
+    ];
+
+
+    // runtime vars: isMeasured, chosen, counts, totalOpens, history
+  let isMeasured = false;
+  let chosen = null;
+  let counts = { normal: 0, duplicate: 0, dancing: 0, disappeared: 0 };
+  let totalOpens = 0;
+  let history = [];
+
+
+    // pick a random state and save it
+    function collapseWavefunction() {
+      const randomIndex = Math.floor(Math.random() * quantumStates.length);
+      chosen = quantumStates[randomIndex];
+      isMeasured = true;
+
+      counts[chosen.id]++;
+      totalOpens++;
+      history.unshift(`Experiment #${totalOpens}: ${chosen.label}`);
+    }
+
+
+    // open box, collapse, show result
+    function openBox() {
+      document.getElementById("lid").classList.add("open");
+
+      collapseWavefunction();
+
+      document.getElementById("zombie-emoji").textContent = chosen.emoji;
+      document.getElementById("zombie-label").textContent = chosen.label;
+
+      // reveal the entangled box 2
+  const partner = entangledPair[chosen.id];
+      document.getElementById("lid2").classList.add("open");
+      document.getElementById("zombie-emoji2").textContent = partner.emoji;
+      document.getElementById("zombie-label2").textContent = partner.label;
+      document.getElementById("entangle-status").textContent =
+        "Box 2 collapsed instantly because it shares a wavefunction with Box 1.";
+
+      document.getElementById("status").textContent = "📭 Box Open - Wavefunction Collapsed!";
+      document.getElementById("collapse-msg").textContent = "⚡ Wavefunction Collapsed!";
+      document.getElementById("context-line").textContent = chosen.context;
+
+  document.getElementById("tunnelBtn").disabled = true;
+      document.getElementById("openBtn").disabled  = true;
+      document.getElementById("closeBtn").disabled = false;
+
+      renderStateList();
+      renderStats();
+      renderHistory();
+    }
+
+
+    // close box, reset view
+    function closeBox() {
+      isMeasured = false;
+      chosen = null;
+
+      document.getElementById("lid").classList.remove("open");
+      document.getElementById("lid2").classList.remove("open");
+
+      document.getElementById("zombie-emoji").textContent = "❓";
+      document.getElementById("zombie-label").textContent = "";
+      document.getElementById("zombie-emoji2").textContent = "❓";
+      document.getElementById("zombie-label2").textContent = "";
+
+      document.getElementById("entangle-status").textContent = "";
+      document.getElementById("status").textContent = "📦 Box Closed (Superposition Active)";
+      document.getElementById("collapse-msg").textContent = "";
+      document.getElementById("context-line").textContent = "";
+
+      document.getElementById("tunnelBtn").disabled = false;
+      document.getElementById("openBtn").disabled  = false;
+      document.getElementById("closeBtn").disabled = true;
+
+      renderStateList();
+    }
+
+
+    function resetBox() {
+      closeBox();
+      counts    = { normal: 0, duplicate: 0, dancing: 0, disappeared: 0 };
+      totalOpens = 0;
+      history   = [];
+      renderStats();
+      renderHistory();
+    }
+
+
+    // try tunneling (20% chance)
+    function tryTunnel() {
+      if (isMeasured) return;
+      const tunnelChance = 0.2;
+      if (Math.random() < tunnelChance) {
+        // tunneled out: mark disappeared and set chosen so rendering works
+        chosen = quantumStates.find(s => s.id === 'disappeared');
+        isMeasured = true;
+
+        document.getElementById('zombie-emoji').textContent = chosen.emoji;
+        document.getElementById('zombie-label').textContent = 'Tunneled out!';
+        document.getElementById('status').textContent = '💨 Zombie tunneled out!';
+        document.getElementById('collapse-msg').textContent = '⚡ Collapsed (tunnel)';
+        document.getElementById('context-line').textContent = chosen.context;
+
+        const partner = entangledPair[chosen.id];
+        document.getElementById('lid2').classList.add('open');
+        document.getElementById('zombie-emoji2').textContent = partner.emoji;
+        document.getElementById('zombie-label2').textContent = partner.label;
+        document.getElementById('entangle-status').textContent = 'Box 2 collapsed (entangled)';
+
+        counts['disappeared']++;
+        totalOpens++;
+        history.unshift(`Experiment #${totalOpens}: ${chosen.label} (tunneled)`);
+
+        document.getElementById('tunnelBtn').disabled = true;
+        document.getElementById('openBtn').disabled = true;
+        document.getElementById('closeBtn').disabled = false;
+
+        renderStateList();
+        renderStats();
+        renderHistory();
+      } else {
+        document.getElementById('context-line').textContent = 'No tunnel this time. Try again.';
+      }
+    }
+
+
+    function renderStateList() {
+      const list = document.getElementById('state-list');
+      list.innerHTML = '';
+      quantumStates.forEach(state => {
+        let dotClass = 'dot';
+        if (!isMeasured) dotClass = 'dot active';
+        else if (chosen && state.id === chosen.id) dotClass = 'dot selected';
+        const item = document.createElement('li');
+        item.innerHTML = `<span class="${dotClass}"></span> ${state.emoji} ${state.label}`;
+        list.appendChild(item);
+      });
+    }
+
+
+    function renderStats() {
+      const getPct = id => {
+        if (totalOpens === 0) return '—';
+        const pct = Math.round((counts[id] / totalOpens) * 100);
+        return `${counts[id]}x (${pct}%)`;
+      };
+      document.getElementById('stats-grid').innerHTML = `
+        <span>Total observations:</span><span>${totalOpens}</span>
+        <span>🧟 Normal:</span><span>${getPct('normal')}</span>
+        <span>🧟🧟 Duplicate:</span><span>${getPct('duplicate')}</span>
+        <span>🕺 Dancing:</span><span>${getPct('dancing')}</span>
+        <span>👻 Disappeared:</span><span>${getPct('disappeared')}</span>`;
+    }
+
+
+    function renderHistory() {
+      const list = document.getElementById('history-list');
+      list.innerHTML = '';
+      if (history.length === 0) {
+        list.innerHTML = '<li class="no-history">No observations yet.</li>';
+        return;
+      }
+      history.slice(0, 8).forEach(h => {
+        const item = document.createElement('li');
+        item.textContent = h;
+        list.appendChild(item);
+      });
+    }
+
+
+    renderStateList();
+    renderStats();
+    renderHistory();
+
+  </script>
+</body>
+</html>
